@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { uploadAvatar, avatarUrl } from '../../lib/cloudinary';
+import { uploadAvatar } from '../../lib/cloudinary';
 import { G1_ROLES, RoleKey, validateUsername } from '../../lib/g1';
 import { G1Wordmark } from '../../components/G1Logo';
 
@@ -11,13 +11,11 @@ export default function OnboardingWizard({ session }: { session: any }) {
   const nav = useNavigate();
   const [step, setStep] = useState<Step>('welcome');
 
-  // Collected data
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [roles, setRoles] = useState<RoleKey[]>(['personal']);
 
-  // Load existing profile once
   useEffect(() => {
     supabase
       .from('profiles')
@@ -30,8 +28,7 @@ export default function OnboardingWizard({ session }: { session: any }) {
           return;
         }
         if (data?.display_name) setDisplayName(data.display_name);
-        if (data?.avatar_url)   setAvatarUrl(data.avatar_url);
-        // Start username blank so user picks their own (trigger set a placeholder)
+        if (data?.avatar_url) setAvatarUrl(data.avatar_url);
         if (data?.username && !data.username.startsWith('user_')) {
           setUsername(data.username);
         }
@@ -56,7 +53,6 @@ export default function OnboardingWizard({ session }: { session: any }) {
       return;
     }
 
-    // Insert roles (upsert to be safe)
     await supabase.from('roles').upsert(
       roles.map((r) => ({ user_id: session.user.id, role: r, is_primary: r === roles[0] })),
       { onConflict: 'user_id,role' }
@@ -66,26 +62,24 @@ export default function OnboardingWizard({ session }: { session: any }) {
   }
 
   function computeCompletion() {
-    let pct = 30; // name + username + email
+    let pct = 30;
     if (avatarUrl) pct += 20;
     if (roles.length > 1) pct += 15;
-    pct += 20; // roles added
-    pct += 15; // account secured by default
+    pct += 20;
+    pct += 15;
     return Math.min(pct, 100);
   }
 
   return (
     <div className="onb">
       <div className="onb__progress">
-        {(['welcome','name','username','photo','roles','done'] as Step[]).map((s) => (
+        {(['welcome', 'name', 'username', 'photo', 'roles', 'done'] as Step[]).map((s) => (
           <div key={s} className={'onb__dot' + (s === step ? ' is-active' : '')} />
         ))}
       </div>
 
       <div className="onb__body">
-        {step === 'welcome' && (
-          <WelcomeStep onNext={() => setStep('name')} />
-        )}
+        {step === 'welcome' && <WelcomeStep onNext={() => setStep('name')} />}
 
         {step === 'name' && (
           <NameStep
@@ -112,7 +106,6 @@ export default function OnboardingWizard({ session }: { session: any }) {
             onChange={setAvatarUrl}
             onBack={() => setStep('username')}
             onNext={() => setStep('roles')}
-            userId={session.user.id}
           />
         )}
 
@@ -138,7 +131,6 @@ export default function OnboardingWizard({ session }: { session: any }) {
   );
 }
 
-/* ---------- Step 1: Welcome ---------- */
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <>
@@ -146,8 +138,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         <G1Wordmark height={36} />
         <h1 className="onb__title">Build your G1 identity</h1>
         <p className="onb__sub">
-          One ID. One identity. Many G1 products.
-          This takes about 60 seconds.
+          One ID. One identity. Many G1 products. This takes about 60 seconds.
         </p>
       </div>
       <div className="onb__actions">
@@ -159,7 +150,6 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-/* ---------- Step 2: Name ---------- */
 function NameStep({
   value, onChange, onNext, onBack,
 }: {
@@ -199,7 +189,6 @@ function NameStep({
   );
 }
 
-/* ---------- Step 3: Username ---------- */
 function UsernameStep({
   value, onChange, onNext, onBack, userId,
 }: {
@@ -210,7 +199,6 @@ function UsernameStep({
   const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
 
-  // Debounced availability check
   useEffect(() => {
     const v = value.trim().toLowerCase();
     if (!v) { setAvailable(null); setError(''); return; }
@@ -226,7 +214,6 @@ function UsernameStep({
         .eq('username', v)
         .maybeSingle();
       setChecking(false);
-      // Available if no row, OR the row is this user
       setAvailable(!data || data.id === userId);
     }, 400);
     return () => clearTimeout(t);
@@ -275,11 +262,7 @@ function UsernameStep({
 
       <div className="onb__actions">
         <button className="g1-btn g1-btn--ghost" onClick={onBack}>Back</button>
-        <button
-          className="g1-btn g1-btn--solid"
-          onClick={next}
-          disabled={!available}
-        >
+        <button className="g1-btn g1-btn--solid" onClick={next} disabled={!available}>
           Continue
         </button>
       </div>
@@ -287,7 +270,6 @@ function UsernameStep({
   );
 }
 
-/* ---------- Step 4: Photo ---------- */
 function PhotoStep({
   avatarUrl, onChange, onNext, onBack,
 }: {
@@ -321,12 +303,14 @@ function PhotoStep({
   return (
     <>
       <h1 className="onb__title">Add a profile photo</h1>
-      <p className="onb__sub">A photo helps people recognize you across G1. You can skip this.</p>
+      <p className="onb__sub">
+        A photo helps people recognize you across G1. You can skip this.
+      </p>
 
       <div className="onb__avatar-wrap">
         <label className="onb__avatar" htmlFor="avatar-input">
           {avatarUrl ? (
-            <img src={avatarUrl(avatarUrl, 200)} alt="" />
+            <img src={avatarUrl} alt="" />
           ) : (
             <span className="onb__avatar-placeholder">+</span>
           )}
@@ -360,7 +344,6 @@ function PhotoStep({
   );
 }
 
-/* ---------- Step 5: Roles ---------- */
 function RolesStep({
   roles, onChange, onNext, onBack,
 }: {
@@ -368,7 +351,7 @@ function RolesStep({
   onNext: () => void; onBack: () => void;
 }) {
   function toggle(key: RoleKey) {
-    if (key === 'personal') return; // personal is always on
+    if (key === 'personal') return;
     onChange(
       roles.includes(key)
         ? roles.filter((r) => r !== key)
@@ -408,15 +391,12 @@ function RolesStep({
 
       <div className="onb__actions">
         <button className="g1-btn g1-btn--ghost" onClick={onBack}>Back</button>
-        <button className="g1-btn g1-btn--solid" onClick={onNext}>
-          Continue
-        </button>
+        <button className="g1-btn g1-btn--solid" onClick={onNext}>Continue</button>
       </div>
     </>
   );
 }
 
-/* ---------- Step 6: Done ---------- */
 function DoneStep({
   displayName, username, roles, onFinish,
 }: {
@@ -431,10 +411,10 @@ function DoneStep({
     <>
       <div className="onb__hero">
         <div className="onb__success">✓</div>
-        <h1 className="onb__title">You're all set{displayName ? ', ' + displayName.split(' ')[0] : ''}!</h1>
-        <p className="onb__sub">
-          Your G1 ID is ready. Here's what you can access:
-        </p>
+        <h1 className="onb__title">
+          You're all set{displayName ? ', ' + displayName.split(' ')[0] : ''}!
+        </h1>
+        <p className="onb__sub">Your G1 ID is ready. Here's what you can access:</p>
       </div>
 
       <div className="onb__summary">
