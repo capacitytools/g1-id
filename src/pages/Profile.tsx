@@ -35,10 +35,10 @@ export default function Profile({ session }: { session: any }) {
           <span>My Roles</span><span className="menu__chev">›</span>
         </Link>
         <Link to="/security" className="menu__item">
-          <span>Security Center</span><span className="menu__badge">Soon</span>
+          <span>Security Center</span><span className="menu__chev">›</span>
         </Link>
         <Link to="/privacy" className="menu__item">
-          <span>Privacy</span><span className="menu__badge">Soon</span>
+          <span>Privacy</span><span className="menu__chev">›</span>
         </Link>
       </div>
 
