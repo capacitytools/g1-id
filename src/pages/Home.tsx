@@ -4,12 +4,15 @@ import { supabase } from '../lib/supabase';
 import { G1Wordmark } from '../components/G1Logo';
 import { G1_ROLES, G1_PRODUCTS, RoleKey } from '../lib/g1';
 import { avatarUrl } from '../lib/cloudinary';
+import G1QRCard from '../components/G1QRCard';
 
 export default function Home({ session }: { session: any }) {
   const nav = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [roles, setRoles] = useState<RoleKey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [toast, setToast] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -35,27 +38,24 @@ export default function Home({ session }: { session: any }) {
     })();
   }, [session, nav]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    window.location.href = '/';
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2200);
   }
 
-  if (loading) return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100dvh' }}>
-      <div className="g1-spinner" />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+        <div className="g1-spinner" />
+      </div>
+    );
+  }
 
   const firstName = (profile?.display_name || '').split(' ')[0] || profile?.username;
   const roleLabels = G1_ROLES.filter((r) => roles.includes(r.key));
 
   return (
     <div className="home">
-      <div className="home__top">
-        <G1Wordmark height={26} />
-        <button onClick={signOut} className="home__signout">Sign out</button>
-      </div>
-
       <header className="home__greeting">
         <p className="home__hello">Welcome back,</p>
         <h1 className="home__name">{firstName}</h1>
@@ -65,7 +65,6 @@ export default function Home({ session }: { session: any }) {
         </p>
       </header>
 
-      {/* ---- G1 IDENTITY CARD ---- */}
       <div className="idcard">
         <div className="idcard__brand">
           <G1Wordmark height={18} variant="white" />
@@ -92,8 +91,15 @@ export default function Home({ session }: { session: any }) {
         </div>
 
         <div className="idcard__actions">
-          <button className="idcard__btn idcard__btn--ghost">Share ID</button>
-          <button className="idcard__btn idcard__btn--solid">View Profile</button>
+          <button className="idcard__btn idcard__btn--ghost" onClick={() => setQrOpen(true)}>
+            Share ID
+          </button>
+          <button
+            className="idcard__btn idcard__btn--solid"
+            onClick={() => nav('/identity')}
+          >
+            View Profile
+          </button>
         </div>
 
         <p className="idcard__note">
@@ -101,11 +107,12 @@ export default function Home({ session }: { session: any }) {
         </p>
       </div>
 
-      {/* ---- YOUR G1 WORLD ---- */}
       <section className="home__section">
         <div className="home__section-head">
           <h2>Your G1 World</h2>
-          <span className="home__section-link">View all →</span>
+          <button className="home__section-link" onClick={() => nav('/g1')}>
+            View all →
+          </button>
         </div>
 
         <div className="home__products">
@@ -118,6 +125,16 @@ export default function Home({ session }: { session: any }) {
           ))}
         </div>
       </section>
+
+      <G1QRCard
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        username={profile?.username}
+        displayName={profile?.display_name}
+        onToast={showToast}
+      />
+
+      {toast && <div className="g1-toast">{toast}</div>}
     </div>
   );
 }
