@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import {
-  computeSecurityChecks,
-  securityScore,
-  timeAgo,
-} from '../lib/security';
+import { computeSecurityChecks, securityScore, timeAgo } from '../lib/security';
+import { explainLogin } from '../lib/ai';
+import G1AIButton from '../components/G1AIButton';
 
 const EVENT_LABELS: Record<string, string> = {
   login: 'New login',
@@ -70,7 +68,6 @@ export default function Security({ session }: { session: any }) {
 
       <p className="page__sub">Protect your G1 ID. Review devices, activity, and enable stronger sign-in.</p>
 
-      {/* Score ring */}
       <section className="sec-score">
         <div className="sec-score__ring" style={{ '--pct': `${score}%` } as any}>
           <span>{score}%</span>
@@ -81,7 +78,6 @@ export default function Security({ session }: { session: any }) {
         </div>
       </section>
 
-      {/* Checks */}
       <section className="sec-checks">
         {checks.map((c) => (
           <div key={c.key} className={'sec-check' + (c.passed ? ' is-ok' : '')}>
@@ -92,7 +88,6 @@ export default function Security({ session }: { session: any }) {
         ))}
       </section>
 
-      {/* Devices */}
       <section className="sec-block">
         <h2 className="sec-block__title">Devices & sessions</h2>
         {devices.length === 0 && (
@@ -101,10 +96,7 @@ export default function Security({ session }: { session: any }) {
         {devices.map((d) => (
           <div key={d.id} className="sec-device">
             <div className="sec-device__icon" aria-hidden>
-              {/Android/i.test(d.platform || '') ? '📱' :
-               /iOS/i.test(d.platform || '') ? '📱' :
-               /Windows/i.test(d.platform || '') ? '💻' :
-               /Mac/i.test(d.platform || '') ? '💻' : '🖥️'}
+              {/Android|iOS/i.test(d.platform || '') ? '📱' : '💻'}
             </div>
             <div className="sec-device__meta">
               <strong>{d.label || 'Unknown device'}</strong>
@@ -115,30 +107,42 @@ export default function Security({ session }: { session: any }) {
         ))}
       </section>
 
-      {/* Activity */}
       <section className="sec-block">
         <h2 className="sec-block__title">Recent activity</h2>
         {events.length === 0 && (
           <p className="sec-block__empty">No activity yet.</p>
         )}
         {events.map((e) => (
-          <div key={e.id} className="sec-event">
-            <div className="sec-event__dot" />
-            <div className="sec-event__meta">
-              <strong>{EVENT_LABELS[e.kind] || e.kind}</strong>
-              <small>
-                {e.metadata?.platform ? `${e.metadata.platform} · ${e.metadata.browser || ''}` : ''}
-                {' · '}
-                {timeAgo(e.created_at)}
-              </small>
+          <div key={e.id} className="sec-event-block">
+            <div className="sec-event">
+              <div className="sec-event__dot" />
+              <div className="sec-event__meta">
+                <strong>{EVENT_LABELS[e.kind] || e.kind}</strong>
+                <small>
+                  {e.metadata?.platform ? `${e.metadata.platform} · ${e.metadata.browser || ''}` : ''}
+                  {' · '}{timeAgo(e.created_at)}
+                </small>
+              </div>
             </div>
+            <G1AIButton
+              label="Explain this"
+              loadingLabel="Reading…"
+              compact
+              onRun={() =>
+                explainLogin({
+                  kind: EVENT_LABELS[e.kind] || e.kind,
+                  platform: e.metadata?.platform,
+                  browser: e.metadata?.browser,
+                  when: timeAgo(e.created_at),
+                })
+              }
+            />
           </div>
         ))}
       </section>
 
       <p className="sec-note">
-        Advanced features — passkeys, 2FA, and recovery — are being built. They'll appear here
-        as they launch.
+        Advanced features — passkeys, 2FA, and recovery — are being built.
       </p>
     </div>
   );
