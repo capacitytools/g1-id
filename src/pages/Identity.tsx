@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { G1_ROLES, RoleKey } from '../lib/g1';
 import { avatarUrl } from '../lib/cloudinary';
+import { improveBio } from '../lib/ai';
+import G1AIButton from '../components/G1AIButton';
 
 export default function Identity({ session }: { session: any }) {
   const [profile, setProfile] = useState<any>(null);
@@ -50,10 +52,7 @@ export default function Identity({ session }: { session: any }) {
       })
       .eq('id', session.user.id);
     setSaving(false);
-    if (error) {
-      alert(error.message);
-      return;
-    }
+    if (error) { alert(error.message); return; }
     setSaved(true);
     setEditing(false);
     setTimeout(() => setSaved(false), 2000);
@@ -110,6 +109,7 @@ export default function Identity({ session }: { session: any }) {
             <label>Display name</label>
             <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
           </div>
+
           <div className="g1-field">
             <label>Bio</label>
             <textarea
@@ -119,7 +119,20 @@ export default function Identity({ session }: { session: any }) {
               placeholder="Tell G1 who you are"
               className="g1-textarea"
             />
+            <G1AIButton
+              label="Improve my bio"
+              loadingLabel="Writing…"
+              acceptLabel="Use this bio"
+              compact
+              onRun={() => improveBio(bio, {
+                displayName,
+                roles: roleLabels.map((r) => r.label),
+                location,
+              })}
+              onAccept={(text) => setBio(text)}
+            />
           </div>
+
           <div className="g1-field">
             <label>Location</label>
             <input
@@ -128,6 +141,7 @@ export default function Identity({ session }: { session: any }) {
               placeholder="City, Country"
             />
           </div>
+
           <button className="g1-btn g1-btn--solid g1-btn--full" onClick={save} disabled={saving}>
             {saving ? 'Saving…' : 'Save changes'}
           </button>
