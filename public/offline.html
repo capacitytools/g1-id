@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0B5D3B" />
+    <title>G1 ID — Offline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        font-family: 'Inter', -apple-system, sans-serif;
+        background: #F7F9F8;
+        color: #17211C;
+      }
+      .wrap {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px 24px;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 8px;
+      }
+      p {
+        color: #66736C;
+        font-size: 15px;
+        line-height: 1.5;
+        max-width: 320px;
+        margin: 0 0 24px;
+      }
+      button {
+        min-height: 48px;
+        padding: 0 24px;
+        border-radius: 12px;
+        border: none;
+        background: #0B5D3B;
+        color: #fff;
+        font-weight: 600;
+        font-size: 15px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      button:active { transform: scale(0.98); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <svg class="logo" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4a20 20 0 1 0 20 20h-9.5A10.5 10.5 0 1 1 24 13.5V4Z" fill="#0B5D3B"/>
+        <rect x="24" y="24" width="20" height="8" rx="4" fill="#0B5D3B"/>
+        <circle cx="42" cy="8" r="4" fill="#0B5D3B"/>
+      </svg>
+      <h1>You're offline</h1>
+      <p>G1 ID needs a connection to load your identity. Check your network and try again.</p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>
