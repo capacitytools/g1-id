@@ -9,7 +9,9 @@ export async function uploadAvatar(
     const form = new FormData();
     form.append('file', file);
     form.append('upload_preset', CLOUDINARY_PRESET);
-    form.append('folder', 'g1/avatars');
+    // NOTE: DO NOT append 'folder' here.
+    // For unsigned uploads, Cloudinary requires the folder to be
+    // set INSIDE the upload preset — sending it here causes 400.
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`);
@@ -29,7 +31,12 @@ export async function uploadAvatar(
           reject(new Error('Bad response from Cloudinary'));
         }
       } else {
-        reject(new Error('Upload failed: ' + xhr.status));
+        let msg = `Upload failed: ${xhr.status}`;
+        try {
+          const err = JSON.parse(xhr.responseText);
+          if (err?.error?.message) msg = err.error.message;
+        } catch {}
+        reject(new Error(msg));
       }
     };
 
@@ -38,10 +45,8 @@ export async function uploadAvatar(
   });
 }
 
-/** Cloudinary URL transformation — smaller avatar for cards */
 export function avatarUrl(url: string, size = 200): string {
   if (!url) return '';
   if (!url.includes('res.cloudinary.com')) return url;
-  // insert transformation: w_SIZE,h_SIZE,c_fill,q_auto,f_auto
   return url.replace('/upload/', `/upload/w_${size},h_${size},c_fill,q_auto,f_auto/`);
 }
