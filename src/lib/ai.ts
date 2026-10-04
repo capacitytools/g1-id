@@ -1,17 +1,13 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
-const MODEL = 'gemini-1.5-flash';
-const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+const BASE = 'https://openrouter.ai/api/v1';
+const MODEL = 'google/gemini-2.0-flash-exp:free';
 
-export type AIMessage = { role: 'user' | 'model'; text: string };
+export type AIMessage = { role: 'user' | 'assistant'; text: string };
 
 export type AIRequest = {
-  /** System prompt — G1 AI's identity and rules */
   system?: string;
-  /** Conversation history. Last item should be role: 'user' */
   messages: AIMessage[];
-  /** Max output tokens */
   maxTokens?: number;
-  /** 0.0 = deterministic, 1.0 = creative */
   temperature?: number;
 };
 
@@ -26,48 +22,43 @@ Rules:
 - When asked to write text (bios, descriptions), produce only the text, no quotes or labels.`;
 
 export async function askG1AI(req: AIRequest): Promise<string> {
-  if (!API_KEY) {
-    throw new Error('G1 AI is not configured yet.');
-  }
+  if (!API_KEY) throw new Error('G1 AI is not configured yet.');
 
   const body = {
-    systemInstruction: {
-      parts: [{ text: req.system || DEFAULT_SYSTEM }],
-    },
-    contents: req.messages.map((m) => ({
-      role: m.role,
-      parts: [{ text: m.text }],
-    })),
-    generationConfig: {
-      temperature: req.temperature ?? 0.7,
-      maxOutputTokens: req.maxTokens ?? 400,
-      topP: 0.9,
-    },
+    model: MODEL,
+    messages: [
+      { role: 'system', content: req.system || DEFAULT_SYSTEM },
+      ...req.messages.map((m) => ({ role: m.role, content: m.text })),
+    ],
+    max_tokens: req.maxTokens ?? 400,
+    temperature: req.temperature ?? 0.7,
   };
 
-  const res = await fetch(`${BASE}/${MODEL}:generateContent?key=${API_KEY}`, {
+  const res = await fetch(`${BASE}/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${API_KEY}`,
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'G1 ID',
+    },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     console.error('G1 AI error', res.status, text);
-    if (res.status === 400) throw new Error('G1 AI could not process that request.');
-    if (res.status === 403) throw new Error('G1 AI key is invalid or expired.');
+    if (res.status === 401) throw new Error('G1 AI key is invalid.');
+    if (res.status === 402) throw new Error('G1 AI quota reached. Try tomorrow.');
     if (res.status === 429) throw new Error('G1 AI is busy. Try again in a moment.');
     throw new Error('G1 AI is unavailable right now.');
   }
 
   const data = await res.json();
-  const candidate = data?.candidates?.[0];
-  const part = candidate?.content?.parts?.[0]?.text;
-  if (!part) throw new Error('G1 AI returned an empty response.');
-  return part.trim();
+  const out = data?.choices?.[0]?.message?.content;
+  if (!out) throw new Error('G1 AI returned an empty response.');
+  return (out as string).trim();
 }
-
-/* ---------- High-level helpers used by the app ---------- */
 
 export async function improveBio(currentBio: string, context: {
   displayName?: string;
