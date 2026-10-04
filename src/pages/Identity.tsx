@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { G1_ROLES, RoleKey } from '../lib/g1';
-import { avatarUrl } from '../lib/cloudinary';
+import { avatarUrl, uploadAvatar } from '../lib/cloudinary';
 import { improveBio } from '../lib/ai';
 import G1AIButton from '../components/G1AIButton';
 
@@ -14,6 +14,11 @@ export default function Identity({ session }: { session: any }) {
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
+  const [avatarUrlState, setAvatarUrlState] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState('');
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -34,11 +39,40 @@ export default function Identity({ session }: { session: any }) {
       setDisplayName(p.display_name || '');
       setBio(p.bio || '');
       setLocation(p.location || '');
+      setAvatarUrlState(p.avatar_url || '');
     }
     setLoading(false);
   }
 
   useEffect(() => { load(); }, [session]);
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be under 5 MB');
+      return;
+    }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setUploadError('Only JPG, PNG, or WEBP allowed');
+      return;
+    }
+
+    setUploadError('');
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const url = await uploadAvatar(file, setUploadProgress);
+      setAvatarUrlState(url);
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed. Try again.');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -48,6 +82,7 @@ export default function Identity({ session }: { session: any }) {
         display_name: displayName.trim(),
         bio: bio.trim() || null,
         location: location.trim() || null,
+        avatar_url: avatarUrlState || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', session.user.id);
@@ -57,6 +92,18 @@ export default function Identity({ session }: { session: any }) {
     setEditing(false);
     setTimeout(() => setSaved(false), 2000);
     load();
+  }
+
+  function cancel() {
+    // reset unsaved changes
+    if (profile) {
+      setDisplayName(profile.display_name || '');
+      setBio(profile.bio || '');
+      setLocation(profile.location || '');
+      setAvatarUrlState(profile.avatar_url || '');
+    }
+    setUploadError('');
+    setEditing(false);
   }
 
   if (loading) {
@@ -76,7 +123,7 @@ export default function Identity({ session }: { session: any }) {
         <button
           className="g1-btn g1-btn--ghost"
           style={{ minHeight: 40, padding: '0 16px', fontSize: 14 }}
-          onClick={() => setEditing(!editing)}
+          onClick={() => (editing ? cancel() : setEditing(true))}
         >
           {editing ? 'Cancel' : 'Edit'}
         </button>
@@ -85,14 +132,44 @@ export default function Identity({ session }: { session: any }) {
       {saved && <div className="auth-alert auth-alert--success">Profile updated</div>}
 
       <section className="id-hero">
-        <div className="id-hero__avatar">
-          {profile?.avatar_url ? (
-            <img src={avatarUrl(profile.avatar_url, 200)} alt="" />
-          ) : (
-            <span>{(profile?.display_name || profile?.username || '?')[0].toUpperCase()}</span>
+        <div className="id-hero__avatar-wrap">
+          <div className="id-hero__avatar">
+            {avatarUrlState ? (
+              <img src={avatarUrl(avatarUrlState, 240)} alt="" />
+            ) : (
+              <span>{(displayName || profile?.username || '?')[0].toUpperCase()}</span>
+            )}
+
+            {uploading && (
+              <div className="id-hero__uploading">
+                <div className="id-hero__progress">
+                  <div style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <small>{uploadProgress}%</small>
+              </div>
+            )}
+          </div>
+
+          {editing && (
+            <label className="id-hero__camera" htmlFor="avatar-input" aria-label="Change photo">
+              <span aria-hidden>📷</span>
+              <input
+                id="avatar-input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarChange}
+                disabled={uploading}
+                style={{ display: 'none' }}
+              />
+            </label>
           )}
         </div>
-        <h2 className="id-hero__name">{profile?.display_name || profile?.username}</h2>
+
+        {uploadError && (
+          <p className="id-hero__error">{uploadError}</p>
+        )}
+
+        <h2 className="id-hero__name">{displayName || profile?.username}</h2>
         <p className="id-hero__handle">@{profile?.username}</p>
         <div className="id-hero__roles">
           {roleLabels.map((r) => (
@@ -142,8 +219,12 @@ export default function Identity({ session }: { session: any }) {
             />
           </div>
 
-          <button className="g1-btn g1-btn--solid g1-btn--full" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Save changes'}
+          <button
+            className="g1-btn g1-btn--solid g1-btn--full"
+            onClick={save}
+            disabled={saving || uploading}
+          >
+            {saving ? 'Saving…' : uploading ? 'Uploading photo…' : 'Save changes'}
           </button>
         </section>
       ) : (
