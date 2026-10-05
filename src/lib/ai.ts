@@ -1,13 +1,4 @@
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
-const BASE = 'https://openrouter.ai/api/v1';
-
-// Try these in order — first is Qwen3.8 (strong free model),
-// then fallback to the router if the specific slug has changed.
-const MODELS = [
-  'qwen/qwen3.8-27b:free',
-  'google/gemini-2.0-flash-exp:free',
-  'openrouter/free',
-];
+const ENDPOINT = '/api/ai';
 
 export type AIMessage = { role: 'user' | 'assistant'; text: string };
 
@@ -30,59 +21,32 @@ Hard rules:
 - Match the requested character limit strictly.
 - Output only the requested text. No labels, no explanations.`;
 
-async function callModel(model: string, req: AIRequest): Promise<string> {
-  const body = {
-    model,
-    messages: [
-      { role: 'system', content: req.system || DEFAULT_SYSTEM },
-      ...req.messages.map((m) => ({ role: m.role, content: m.text })),
-    ],
-    max_tokens: req.maxTokens ?? 400,
-    temperature: req.temperature ?? 0.7,
-  };
-
-  const res = await fetch(`${BASE}/chat/completions`, {
+export async function askG1AI(req: AIRequest): Promise<string> {
+  const res = await fetch(ENDPOINT, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${API_KEY}`,
-      'HTTP-Referer': 'https://g1-id.vercel.app',
-      'X-Title': 'G1 ID',
-    },
-    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system: req.system || DEFAULT_SYSTEM,
+      messages: req.messages,
+      maxTokens: req.maxTokens,
+      temperature: req.temperature,
+    }),
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    console.error('G1 AI error', model, res.status, text);
     let detail = `HTTP ${res.status}`;
     try {
-      const parsed = JSON.parse(text);
-      if (parsed?.error?.message) detail = parsed.error.message;
+      const j = await res.json();
+      if (j?.error) detail = j.error;
     } catch {}
-    throw new Error(`G1 AI (${model}): ${detail}`);
+    if (res.status === 429) throw new Error('G1 AI is busy. Try again in a minute.');
+    throw new Error(`G1 AI: ${detail}`);
   }
 
   const data = await res.json();
-  const out = data?.choices?.[0]?.message?.content;
-  if (!out) throw new Error('G1 AI returned an empty response.');
-  return (out as string).trim();
+  if (!data?.text) throw new Error('G1 AI returned an empty response.');
+  return (data.text as string).trim();
 }
-
-export async function askG1AI(req: AIRequest): Promise<string> {
-  if (!API_KEY) throw new Error('G1 AI is not configured yet.');
-  const errors: string[] = [];
-  for (const model of MODELS) {
-    try {
-      return await callModel(model, req);
-    } catch (e: any) {
-      errors.push(e?.message || String(e));
-    }
-  }
-  throw new Error(errors.join(' | '));
-}
-
-/* ---------- Bio writer ---------- */
 
 export async function improveBio(currentBio: string, context: {
   displayName?: string;
@@ -124,8 +88,6 @@ Output ONLY the bio text.`;
   });
 }
 
-/* ---------- Role suggestion ---------- */
-
 export async function suggestRoles(about: string): Promise<string> {
   const prompt = `A new G1 ID user described themselves as:
 
@@ -141,8 +103,6 @@ Reply with: (1) the 2-3 best-fit roles, and (2) one short sentence of reasoning.
     temperature: 0.6,
   });
 }
-
-/* ---------- Login explainer ---------- */
 
 export async function explainLogin(meta: {
   platform?: string;
@@ -164,8 +124,6 @@ Keep it under 200 characters. Plain English only.`;
     temperature: 0.4,
   });
 }
-
-/* ---------- Username ideas ---------- */
 
 export async function suggestUsernames(name: string): Promise<string[]> {
   const prompt = `Suggest 5 available-looking G1 ID usernames for someone named "${name}".
