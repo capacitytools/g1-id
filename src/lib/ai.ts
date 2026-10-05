@@ -1,6 +1,12 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 const BASE = 'https://openrouter.ai/api/v1';
-const MODEL = 'google/gemini-2.0-flash-exp:free';
+
+// Try these in order — if one fails, fall back to the next
+const MODELS = [
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemini-flash-1.5-8b-exp:free',
+  'mistralai/mistral-7b-instruct:free',
+];
 
 export type AIMessage = { role: 'user' | 'assistant'; text: string };
 
@@ -21,11 +27,9 @@ Rules:
 - Match the user's tone. Be warm, human, and clear.
 - When asked to write text (bios, descriptions), produce only the text, no quotes or labels.`;
 
-export async function askG1AI(req: AIRequest): Promise<string> {
-  if (!API_KEY) throw new Error('G1 AI is not configured yet.');
-
+async function callModel(model: string, req: AIRequest): Promise<string> {
   const body = {
-    model: MODEL,
+    model,
     messages: [
       { role: 'system', content: req.system || DEFAULT_SYSTEM },
       ...req.messages.map((m) => ({ role: m.role, content: m.text })),
@@ -39,7 +43,7 @@ export async function askG1AI(req: AIRequest): Promise<string> {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${API_KEY}`,
-      'HTTP-Referer': window.location.origin,
+      'HTTP-Referer': 'https://g1-id.vercel.app',
       'X-Title': 'G1 ID',
     },
     body: JSON.stringify(body),
@@ -47,17 +51,37 @@ export async function askG1AI(req: AIRequest): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    console.error('G1 AI error', res.status, text);
-    if (res.status === 401) throw new Error('G1 AI key is invalid.');
-    if (res.status === 402) throw new Error('G1 AI quota reached. Try tomorrow.');
-    if (res.status === 429) throw new Error('G1 AI is busy. Try again in a moment.');
-    throw new Error('G1 AI is unavailable right now.');
+    console.error('G1 AI error', model, res.status, text);
+
+    let detail = `HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.error?.message) detail = parsed.error.message;
+    } catch {}
+
+    throw new Error(`G1 AI (${model}): ${detail}`);
   }
 
   const data = await res.json();
   const out = data?.choices?.[0]?.message?.content;
   if (!out) throw new Error('G1 AI returned an empty response.');
   return (out as string).trim();
+}
+
+export async function askG1AI(req: AIRequest): Promise<string> {
+  if (!API_KEY) throw new Error('G1 AI is not configured yet.');
+
+  let lastError: any = null;
+  for (const model of MODELS) {
+    try {
+      return await callModel(model, req);
+    } catch (e) {
+      lastError = e;
+      // Continue to next model
+    }
+  }
+  // All models failed
+  throw lastError || new Error('G1 AI is unavailable right now.');
 }
 
 export async function improveBio(currentBio: string, context: {
