@@ -2395,3 +2395,67 @@ input, textarea, select {
   border-radius: 50%;
   background: var(--g1-primary);
 }
+/* ============================================
+   STAGE 11 — Security hardening
+   ============================================ */
+
+/* --- Password meter --- */
+.pw-meter {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.pw-meter__seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--g1-border);
+  transition: background 200ms ease;
+}
+.pw-meter__seg.is-1 { background: var(--g1-error); }
+.pw-meter__seg.is-2 { background: var(--g1-warning); }
+.pw-meter__seg.is-3 { background: #6BA368; }
+.pw-meter__seg.is-4 { background: var(--g1-success); }
+
+.pw-meter__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.pw-meter__label strong { font-weight: 700; }
+.pw-meter__hint {
+  color: var(--g1-error);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+/* --- Danger zone --- */
+.danger-zone {
+  margin-top: 40px;
+  padding: 20px;
+  background: #FDF5F5;
+  border: 1px solid #F5C6C6;
+  border-radius: 16px;
+}
+.danger-zone__title {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: var(--g1-error);
+  margin: 0 0 8px;
+}
+.danger-zone__text {
+  font-size: 13px;
+  color: var(--g1-text-secondary);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+.danger-zone__btn {
+  background: var(--g1-error);
+  color: #fff;
+  border: none;
+}
+.danger-zone__btn:hover { background: #A03325; }
