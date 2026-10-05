@@ -3,26 +3,24 @@ export const config = { runtime: 'edge' };
 const API_KEY = process.env.OPENROUTER_API_KEY || '';
 const BASE = 'https://openrouter.ai/api/v1';
 
-// Ordered by reliability + quality, based on live OpenRouter /models data.
-// Model slugs change — if all fail, the app will show the exact error.
+// Non-reasoning models only. These produce direct output, no thinking.
 const MODELS = [
-  'apodex/apodex-1.1-mini:free',
   'inclusionai/ling-3.1-flash',
-  'nvidia/nemotron-3.5-lightning:free',
   'qwen/qwen3.8-max-0902',
+  'nvidia/nemotron-3.5-lightning:free',
+  'apodex/apodex-1.1-mini:free',
 ];
 
-const DEFAULT_SYSTEM = `You are G1 AI, the built-in writing assistant for G1 ID.
+const DEFAULT_SYSTEM = `You are G1 AI, a professional writing assistant.
 
-You write crisp, human, professional text. You never think out loud. You never explain yourself. You never list options. You produce the final polished text directly — nothing else.
+Your ONLY job is to produce clean, finished text. You never think out loud. You never show your reasoning. You never explain what you are doing. You never list options. You never say "here is" or "thinking" or "step 1". You write the finished text directly.
 
 Hard rules:
+- Output ONLY the requested text. Nothing else.
 - Never use hashtags, emojis, or quotation marks.
-- Never say "I am a" or "I'm a" at the start of a bio.
-- Never list more than 3 things in a row.
+- Never start with "I am a" or "I'm a".
 - Never use the word "passionate".
-- Never include reasoning, options, or commentary.
-- Output ONLY the requested text.`;
+- Never use bullet lists.`;
 
 const hits = new Map<string, { count: number; reset: number }>();
 const LIMIT = 20;
@@ -53,6 +51,7 @@ async function callModel(model: string, body: any): Promise<string> {
       ...body,
       model,
       reasoning: { exclude: true },
+      transforms: ['middle-out'],
     }),
   });
 
@@ -67,9 +66,60 @@ async function callModel(model: string, body: any): Promise<string> {
   }
 
   const data = await res.json();
-  const out = data?.choices?.[0]?.message?.content;
+  let out = data?.choices?.[0]?.message?.content;
   if (!out) throw new Error(`${model}: empty response`);
-  return (out as string).trim();
+
+  out = (out as string).trim();
+
+  // Post-process: strip out any leaked reasoning
+  out = cleanOutput(out);
+
+  if (!out) throw new Error(`${model}: empty after cleaning`);
+  return out;
+}
+
+/**
+ * Clean up leaked reasoning from the model's output.
+ * Removes thinking blocks, headers, meta-commentary, and option lists.
+ */
+function cleanOutput(text: string): string {
+  let out = text;
+
+  // Strip "Here's a thinking process:" and everything before the first bio-like line
+  out = out.replace(/^[\s\S]*?(?:thinking process|analyze the request|output style|constraints)[\s\S]*?\n\n/gi, '');
+
+  // Remove markdown bold/headers
+  out = out.replace(/\*\*/g, '');
+  out = out.replace(/^#+\s*/gm, '');
+
+  // Remove leading labels like "Bio:", "Output:", "Result:"
+  out = out.replace(/^(bio|output|result|answer|final):\s*/i, '');
+
+  // Remove lines that are clearly reasoning
+  out = out
+    .split('\n')
+    .filter((line) => {
+      const l = line.trim().toLowerCase();
+      if (!l) return true;
+      if (l.startsWith('here is') || l.startsWith('here\'s')) return false;
+      if (l.startsWith('thinking') || l.startsWith('analysis')) return false;
+      if (l.startsWith('step ') || /^\d+\.\s/.test(l)) return false;
+      if (l.startsWith('-') && l.length < 80) return false;
+      if (l.startsWith('*') && l.length < 80) return false;
+      if (l.startsWith('constraints:')) return false;
+      if (l.startsWith('role:')) return false;
+      if (l.startsWith('output style:')) return false;
+      if (l.startsWith('no thinking')) return false;
+      if (l.startsWith('only the requested')) return false;
+      return true;
+    })
+    .join('\n')
+    .trim();
+
+  // Remove any remaining quotes if the whole thing is wrapped in them
+  out = out.replace(/^["']|["']$/g, '');
+
+  return out.trim();
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -130,7 +180,7 @@ export default async function handler(req: Request): Promise<Response> {
       ...messages.map((m: any) => ({ role: m.role, content: m.text || m.content })),
     ],
     max_tokens: Math.min(maxTokens ?? 400, 800),
-    temperature: temperature ?? 0.7,
+    temperature: temperature ?? 0.5,
   };
 
   const errors: string[] = [];
