@@ -3,26 +3,26 @@ export const config = { runtime: 'edge' };
 const API_KEY = process.env.OPENROUTER_API_KEY || '';
 const BASE = 'https://openrouter.ai/api/v1';
 
-// Try these in order. First one usually works.
-// Note: some free-tier slugs get retired by OpenRouter — we keep fallbacks.
+// Only non-reasoning models — no thinking out loud.
+// First one usually works; fallbacks in case of rate limits.
 const MODELS = [
-  'openrouter/free',
+  'google/gemini-2.0-flash-exp:free',
   'meta-llama/llama-3.3-70b-instruct:free',
-  'deepseek/deepseek-chat-v3.1:free',
-  'qwen/qwen3-235b-a22b:free',
+  'qwen/qwen-2.5-72b-instruct:free',
+  'openrouter/free',
 ];
 
 const DEFAULT_SYSTEM = `You are G1 AI, the built-in writing assistant for G1 ID.
 
-You write crisp, human, professional text. You never sound generic or corporate. You never list things unnecessarily. You write like a person, not a brochure.
+You write crisp, human, professional text. You never think out loud. You never explain yourself. You never list options. You produce the final polished text directly — nothing else.
 
 Hard rules:
 - Never use hashtags, emojis, or quotation marks.
 - Never say "I am a" or "I'm a" at the start of a bio.
 - Never list more than 3 things in a row.
 - Never use the word "passionate".
-- Match the requested character limit strictly.
-- Output only the requested text. No labels, no explanations.`;
+- Never include reasoning, options, or commentary.
+- Output ONLY the requested text.`;
 
 const hits = new Map<string, { count: number; reset: number }>();
 const LIMIT = 20;
@@ -49,7 +49,12 @@ async function callModel(model: string, body: any): Promise<string> {
       'HTTP-Referer': 'https://g1-id.vercel.app',
       'X-Title': 'G1 ID',
     },
-    body: JSON.stringify({ ...body, model }),
+    body: JSON.stringify({
+      ...body,
+      model,
+      // Critical: turn off reasoning tokens
+      reasoning: { exclude: true },
+    }),
   });
 
   if (!res.ok) {
