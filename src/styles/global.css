@@ -2459,3 +2459,42 @@ input, textarea, select {
   border: none;
 }
 .danger-zone__btn:hover { background: #A03325; }
+/* ============================================
+   Password input with eye toggle + strength
+   ============================================ */
+
+.pw-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pw-input input {
+  width: 100%;
+  padding-right: 48px !important;
+}
+
+.pw-input__eye {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: var(--g1-text-secondary);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-input__eye:hover {
+  background: var(--g1-primary-light);
+  color: var(--g1-primary);
+}
+.pw-input__eye:active {
+  transform: translateY(-50%) scale(0.94);
+}
