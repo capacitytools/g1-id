@@ -1,11 +1,13 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 const BASE = 'https://openrouter.ai/api/v1';
 
-// Try these in order — if one fails, fall back to the next
+// Try these in order. First is OpenRouter's free router (auto-picks any
+// available free model). Fallbacks are specific free models for redundancy.
 const MODELS = [
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-flash-1.5-8b-exp:free',
-  'mistralai/mistral-7b-instruct:free',
+  'openrouter/free',
+  'qwen/qwen3.8-27b:free',
+  'liquid/lfm2.5-2.6b:free',
+  'nvidia/nemotron-3.5-lightning:free',
 ];
 
 export type AIMessage = { role: 'user' | 'assistant'; text: string };
@@ -71,17 +73,15 @@ async function callModel(model: string, req: AIRequest): Promise<string> {
 export async function askG1AI(req: AIRequest): Promise<string> {
   if (!API_KEY) throw new Error('G1 AI is not configured yet.');
 
-  let lastError: any = null;
+  const errors: string[] = [];
   for (const model of MODELS) {
     try {
       return await callModel(model, req);
-    } catch (e) {
-      lastError = e;
-      // Continue to next model
+    } catch (e: any) {
+      errors.push(e?.message || String(e));
     }
   }
-  // All models failed
-  throw lastError || new Error('G1 AI is unavailable right now.');
+  throw new Error(errors.join(' | '));
 }
 
 export async function improveBio(currentBio: string, context: {
