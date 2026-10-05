@@ -3,13 +3,13 @@ export const config = { runtime: 'edge' };
 const API_KEY = process.env.OPENROUTER_API_KEY || '';
 const BASE = 'https://openrouter.ai/api/v1';
 
-// Only non-reasoning models — no thinking out loud.
-// First one usually works; fallbacks in case of rate limits.
+// Ordered by reliability + quality, based on live OpenRouter /models data.
+// Model slugs change — if all fail, the app will show the exact error.
 const MODELS = [
-  'google/gemini-2.0-flash-exp:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'qwen/qwen-2.5-72b-instruct:free',
-  'openrouter/free',
+  'apodex/apodex-1.1-mini:free',
+  'inclusionai/ling-3.1-flash',
+  'nvidia/nemotron-3.5-lightning:free',
+  'qwen/qwen3.8-max-0902',
 ];
 
 const DEFAULT_SYSTEM = `You are G1 AI, the built-in writing assistant for G1 ID.
@@ -52,7 +52,6 @@ async function callModel(model: string, body: any): Promise<string> {
     body: JSON.stringify({
       ...body,
       model,
-      // Critical: turn off reasoning tokens
       reasoning: { exclude: true },
     }),
   });
