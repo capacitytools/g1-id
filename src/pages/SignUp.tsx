@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { G1Wordmark } from '../components/G1Logo';
 import { checkPassword } from '../lib/password';
+import G1PasswordInput from '../components/G1PasswordInput';
 
 export default function SignUp() {
   const nav = useNavigate();
@@ -14,8 +15,8 @@ export default function SignUp() {
 
   const strength = checkPassword(password);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     setError(''); setSuccess('');
     if (!email.trim() || !password) return setError('Enter email and password.');
     if (password.length < 8) return setError('Password must be 8+ characters.');
@@ -57,38 +58,15 @@ export default function SignUp() {
             />
           </div>
 
-          <div className="g1-field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              required
-            />
-            {password && (
-              <>
-                <div className="pw-meter">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className={
-                        'pw-meter__seg' +
-                        (i <= strength.score ? ` is-${strength.score}` : '')
-                      }
-                    />
-                  ))}
-                </div>
-                <div className="pw-meter__label">
-                  <strong>{strength.label}</strong>
-                </div>
-                {strength.hints.length > 0 && (
-                  <p className="pw-meter__hint">{strength.hints[0]}</p>
-                )}
-              </>
-            )}
-          </div>
+          <G1PasswordInput
+            value={password}
+            onChange={setPassword}
+            label="Password"
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+            showStrength={true}
+            onEnter={() => handleSubmit()}
+          />
 
           <button
             type="submit"
