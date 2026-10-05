@@ -2465,29 +2465,33 @@ input, textarea, select {
 
 .pw-input {
   position: relative;
-  display: flex;
-  align-items: center;
+  width: 100%;
 }
 
 .pw-input input {
   width: 100%;
-  padding-right: 48px !important;
+  padding-right: 52px !important;
+  box-sizing: border-box;
 }
 
 .pw-input__eye {
   position: absolute;
-  right: 4px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   width: 40px;
   height: 40px;
+  min-height: 40px;
   border-radius: 10px;
   background: transparent;
   border: none;
   color: var(--g1-text-secondary);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  z-index: 2;
+  padding: 0;
   transition: background 120ms ease, color 120ms ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2497,4 +2501,8 @@ input, textarea, select {
 }
 .pw-input__eye:active {
   transform: translateY(-50%) scale(0.94);
+}
+.pw-input__eye svg {
+  display: block;
+  pointer-events: none;
 }
