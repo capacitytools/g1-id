@@ -1,13 +1,12 @@
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 const BASE = 'https://openrouter.ai/api/v1';
 
-// Try these in order. First is OpenRouter's free router (auto-picks any
-// available free model). Fallbacks are specific free models for redundancy.
+// Try these in order — first is Qwen3.8 (strong free model),
+// then fallback to the router if the specific slug has changed.
 const MODELS = [
-  'openrouter/free',
   'qwen/qwen3.8-27b:free',
-  'liquid/lfm2.5-2.6b:free',
-  'nvidia/nemotron-3.5-lightning:free',
+  'google/gemini-2.0-flash-exp:free',
+  'openrouter/free',
 ];
 
 export type AIMessage = { role: 'user' | 'assistant'; text: string };
@@ -19,15 +18,17 @@ export type AIRequest = {
   temperature?: number;
 };
 
-const DEFAULT_SYSTEM = `You are G1 AI, the built-in assistant for G1 ID — the identity layer of the G1-Tech Ecosystem.
+const DEFAULT_SYSTEM = `You are G1 AI, the built-in writing assistant for G1 ID.
 
-Rules:
-- Be concise. Prefer short, useful answers over long explanations.
-- Never invent G1 features that don't exist. If unsure, say so.
-- Never reveal private user data, tokens, or secrets.
-- Never claim to be government identification.
-- Match the user's tone. Be warm, human, and clear.
-- When asked to write text (bios, descriptions), produce only the text, no quotes or labels.`;
+You write crisp, human, professional text. You never sound generic or corporate. You never list things unnecessarily. You write like a person, not a brochure.
+
+Hard rules:
+- Never use hashtags, emojis, or quotation marks.
+- Never say "I am a" or "I'm a" at the start of a bio.
+- Never list more than 3 things in a row.
+- Never use the word "passionate".
+- Match the requested character limit strictly.
+- Output only the requested text. No labels, no explanations.`;
 
 async function callModel(model: string, req: AIRequest): Promise<string> {
   const body = {
@@ -54,13 +55,11 @@ async function callModel(model: string, req: AIRequest): Promise<string> {
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     console.error('G1 AI error', model, res.status, text);
-
     let detail = `HTTP ${res.status}`;
     try {
       const parsed = JSON.parse(text);
       if (parsed?.error?.message) detail = parsed.error.message;
     } catch {}
-
     throw new Error(`G1 AI (${model}): ${detail}`);
   }
 
@@ -72,7 +71,6 @@ async function callModel(model: string, req: AIRequest): Promise<string> {
 
 export async function askG1AI(req: AIRequest): Promise<string> {
   if (!API_KEY) throw new Error('G1 AI is not configured yet.');
-
   const errors: string[] = [];
   for (const model of MODELS) {
     try {
@@ -84,28 +82,49 @@ export async function askG1AI(req: AIRequest): Promise<string> {
   throw new Error(errors.join(' | '));
 }
 
+/* ---------- Bio writer ---------- */
+
 export async function improveBio(currentBio: string, context: {
   displayName?: string;
   roles?: string[];
   location?: string;
 }): Promise<string> {
-  const prompt = `Rewrite and improve this G1 ID bio. Keep it under 180 characters. First person. Warm, confident, professional but human. Do not use hashtags, emojis, or quotation marks.
+  const roleCount = context.roles?.length || 0;
+  const roleHint = roleCount > 3
+    ? `Pick the 2-3 most important from: ${context.roles?.join(', ')}. Do not list all of them.`
+    : `Roles: ${context.roles?.join(', ') || '(none)'}`;
 
-Current bio: ${currentBio || '(empty)'}
+  const prompt = `Write a G1 ID bio for this person.
 
-Context:
 Name: ${context.displayName || '(not set)'}
-Roles: ${context.roles?.join(', ') || '(none)'}
 Location: ${context.location || '(not set)'}
+${roleHint}
 
-Output only the improved bio text, nothing else.`;
+Current bio (may be empty or rough): "${currentBio || '(empty)'}"
+
+Requirements:
+- Under 160 characters.
+- First person.
+- Warm, sharp, professional.
+- Concrete and specific, not generic.
+- No lists. No "I am a". No "passionate". No hashtags. No emojis. No quotes.
+- Should feel like something a real person would write about themselves.
+
+Style examples (do not copy):
+- "Building calm software for messy problems. Lagos-based, remote-native."
+- "Farmer turned developer. Selling fresh produce and shipping clean code."
+- "Photographer, mentor, and small-business operator. I help people look sharp online."
+
+Output ONLY the bio text.`;
 
   return askG1AI({
     messages: [{ role: 'user', text: prompt }],
     maxTokens: 200,
-    temperature: 0.8,
+    temperature: 0.85,
   });
 }
+
+/* ---------- Role suggestion ---------- */
 
 export async function suggestRoles(about: string): Promise<string> {
   const prompt = `A new G1 ID user described themselves as:
@@ -122,6 +141,8 @@ Reply with: (1) the 2-3 best-fit roles, and (2) one short sentence of reasoning.
     temperature: 0.6,
   });
 }
+
+/* ---------- Login explainer ---------- */
 
 export async function explainLogin(meta: {
   platform?: string;
@@ -143,6 +164,8 @@ Keep it under 200 characters. Plain English only.`;
     temperature: 0.4,
   });
 }
+
+/* ---------- Username ideas ---------- */
 
 export async function suggestUsernames(name: string): Promise<string[]> {
   const prompt = `Suggest 5 available-looking G1 ID usernames for someone named "${name}".
