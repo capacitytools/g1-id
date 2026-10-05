@@ -1,15 +1,15 @@
-// Vercel Serverless Function — runs server-side only.
-// API key stays private on Vercel's servers.
-
 export const config = { runtime: 'edge' };
 
 const API_KEY = process.env.OPENROUTER_API_KEY || '';
 const BASE = 'https://openrouter.ai/api/v1';
 
+// Try these in order. First one usually works.
+// Note: some free-tier slugs get retired by OpenRouter — we keep fallbacks.
 const MODELS = [
-  'qwen/qwen3.8-27b:free',
-  'google/gemini-2.0-flash-exp:free',
   'openrouter/free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'deepseek/deepseek-chat-v3.1:free',
+  'qwen/qwen3-235b-a22b:free',
 ];
 
 const DEFAULT_SYSTEM = `You are G1 AI, the built-in writing assistant for G1 ID.
@@ -24,9 +24,8 @@ Hard rules:
 - Match the requested character limit strictly.
 - Output only the requested text. No labels, no explanations.`;
 
-// Simple in-memory rate limiter (per edge instance — good enough for a single user)
 const hits = new Map<string, { count: number; reset: number }>();
-const LIMIT = 20; // requests per minute per IP
+const LIMIT = 20;
 const WINDOW_MS = 60_000;
 
 function rateLimit(ip: string): boolean {
@@ -60,26 +59,23 @@ async function callModel(model: string, body: any): Promise<string> {
       const p = JSON.parse(text);
       if (p?.error?.message) detail = p.error.message;
     } catch {}
-    throw new Error(`G1 AI (${model}): ${detail}`);
+    throw new Error(`${model}: ${detail}`);
   }
 
   const data = await res.json();
   const out = data?.choices?.[0]?.message?.content;
-  if (!out) throw new Error('G1 AI returned an empty response.');
+  if (!out) throw new Error(`${model}: empty response`);
   return (out as string).trim();
 }
 
 export default async function handler(req: Request): Promise<Response> {
   const cors = {
-    'Access-Control-Allow-Origin': 'https://g1-id.vercel.app',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: cors });
-  }
-
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -117,7 +113,6 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   const { system, messages, maxTokens, temperature } = payload || {};
-
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return new Response(JSON.stringify({ error: 'messages array required' }), {
       status: 400,
