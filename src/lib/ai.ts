@@ -11,15 +11,15 @@ export type AIRequest = {
 
 const DEFAULT_SYSTEM = `You are G1 AI, the built-in writing assistant for G1 ID.
 
-You write crisp, human, professional text. You never sound generic or corporate. You never list things unnecessarily. You write like a person, not a brochure.
+You write crisp, human, professional text. You never think out loud. You never explain yourself. You never list options. You produce the final polished text directly — nothing else.
 
 Hard rules:
 - Never use hashtags, emojis, or quotation marks.
 - Never say "I am a" or "I'm a" at the start of a bio.
 - Never list more than 3 things in a row.
 - Never use the word "passionate".
-- Match the requested character limit strictly.
-- Output only the requested text. No labels, no explanations.`;
+- Never include reasoning, options, or commentary.
+- Output ONLY the requested text.`;
 
 export async function askG1AI(req: AIRequest): Promise<string> {
   const res = await fetch(ENDPOINT, {
@@ -55,36 +55,26 @@ export async function improveBio(currentBio: string, context: {
 }): Promise<string> {
   const roleCount = context.roles?.length || 0;
   const roleHint = roleCount > 3
-    ? `Pick the 2-3 most important from: ${context.roles?.join(', ')}. Do not list all of them.`
+    ? `Pick the 2-3 most important from: ${context.roles?.join(', ')}.`
     : `Roles: ${context.roles?.join(', ') || '(none)'}`;
 
-  const prompt = `Write a G1 ID bio for this person.
+  const prompt = `Write a G1 ID bio.
 
-Name: ${context.displayName || '(not set)'}
-Location: ${context.location || '(not set)'}
-${roleHint}
+Details:
+- Name: ${context.displayName || '(not set)'}
+- Location: ${context.location || '(not set)'}
+- ${roleHint}
 
-Current bio (may be empty or rough): "${currentBio || '(empty)'}"
+Current rough bio: "${currentBio || '(empty)'}"
 
-Requirements:
-- Under 160 characters.
-- First person.
-- Warm, sharp, professional.
-- Concrete and specific, not generic.
-- No lists. No "I am a". No "passionate". No hashtags. No emojis. No quotes.
-- Should feel like something a real person would write about themselves.
+Output a single first-person bio under 150 characters. Warm, sharp, concrete. No lists. No "I am a". No quotes. No emojis. No hashtags.
 
-Style examples (do not copy):
-- "Building calm software for messy problems. Lagos-based, remote-native."
-- "Farmer turned developer. Selling fresh produce and shipping clean code."
-- "Photographer, mentor, and small-business operator. I help people look sharp online."
-
-Output ONLY the bio text.`;
+Output ONLY the bio. No explanations, no options, no commentary.`;
 
   return askG1AI({
     messages: [{ role: 'user', text: prompt }],
-    maxTokens: 200,
-    temperature: 0.85,
+    maxTokens: 150,
+    temperature: 0.8,
   });
 }
 
@@ -95,7 +85,7 @@ export async function suggestRoles(about: string): Promise<string> {
 
 Which G1 roles best fit them? Available roles: Personal, Creator, Business, Expert, Farmer, Developer, Instructor.
 
-Reply with: (1) the 2-3 best-fit roles, and (2) one short sentence of reasoning. Keep total reply under 220 characters.`;
+Reply with the 2-3 best-fit roles and one short sentence of reasoning. Under 220 characters total.`;
 
   return askG1AI({
     messages: [{ role: 'user', text: prompt }],
@@ -110,13 +100,13 @@ export async function explainLogin(meta: {
   kind?: string;
   when?: string;
 }): Promise<string> {
-  const prompt = `Explain this G1 ID account activity to a non-technical user in 1-2 short sentences. Reassure if it looks normal, warn if suspicious.
+  const prompt = `Explain this G1 ID account activity to a non-technical user in 1-2 short sentences.
 
 Activity: ${meta.kind || 'login'}
 Device: ${meta.platform || 'unknown'} — ${meta.browser || 'unknown'}
 When: ${meta.when || 'recently'}
 
-Keep it under 200 characters. Plain English only.`;
+Under 200 characters. Plain English only.`;
 
   return askG1AI({
     messages: [{ role: 'user', text: prompt }],
@@ -126,7 +116,7 @@ Keep it under 200 characters. Plain English only.`;
 }
 
 export async function suggestUsernames(name: string): Promise<string[]> {
-  const prompt = `Suggest 5 available-looking G1 ID usernames for someone named "${name}".
+  const prompt = `Suggest 5 G1 ID usernames for someone named "${name}".
 
 Rules:
 - lowercase letters, numbers, underscores only
@@ -134,7 +124,7 @@ Rules:
 - avoid reserved words (admin, g1, support, help, root, system)
 - no spaces
 
-Reply with ONLY the 5 usernames, one per line. Nothing else.`;
+Reply with ONLY the 5 usernames, one per line.`;
 
   const text = await askG1AI({
     messages: [{ role: 'user', text: prompt }],
