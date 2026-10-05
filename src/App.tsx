@@ -5,6 +5,7 @@ import { logLogin } from './lib/security';
 import Landing from './pages/Landing';
 import SignUp from './pages/SignUp';
 import SignIn from './pages/SignIn';
+import PhoneAuth from './pages/PhoneAuth';
 import Home from './pages/Home';
 import Identity from './pages/Identity';
 import Roles from './pages/Roles';
@@ -13,6 +14,7 @@ import Discover from './pages/Discover';
 import G1Launcher from './pages/G1Launcher';
 import Security from './pages/Security';
 import Privacy from './pages/Privacy';
+import Notifications from './pages/Notifications';
 import PublicProfile from './pages/PublicProfile';
 import OnboardingWizard from './features/onboarding/OnboardingWizard';
 import G1Layout from './components/G1Layout';
@@ -50,6 +52,7 @@ export default function App() {
       <Route path="/" element={<Landing session={session} />} />
       <Route path="/signup" element={session ? <Navigate to="/home" /> : <SignUp />} />
       <Route path="/signin" element={session ? <Navigate to="/home" /> : <SignIn />} />
+      <Route path="/phone" element={session ? <Navigate to="/home" /> : <PhoneAuth />} />
 
       <Route path="/onboarding" element={session ? <OnboardingWizard session={session} /> : <Navigate to="/signin" />} />
 
@@ -61,10 +64,9 @@ export default function App() {
       <Route path="/g1" element={authed(<G1Layout><G1Launcher /></G1Layout>)} />
       <Route path="/security" element={authed(<G1Layout><Security session={session} /></G1Layout>)} />
       <Route path="/privacy" element={authed(<G1Layout><Privacy session={session} /></G1Layout>)} />
+      <Route path="/notifications" element={authed(<G1Layout><Notifications session={session} /></G1Layout>)} />
 
-      {/* Public profile — must come last */}
       <Route path="/:handle" element={<PublicProfile />} />
-
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
