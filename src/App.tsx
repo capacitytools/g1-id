@@ -19,9 +19,12 @@ import PublicProfile from './pages/PublicProfile';
 import OnboardingWizard from './features/onboarding/OnboardingWizard';
 import G1Layout from './components/G1Layout';
 
-// --- NEW EBOOK IMPORTS ---
+// Ebooks
 import Ebooks from './pages/Ebooks';
 import EbookEditor from './pages/EbookEditor';
+
+// Newsletter
+import Newsletter from './pages/Newsletter';
 
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -39,30 +42,20 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
-        <div className="g1-spinner" />
-      </div>
-    );
-  }
+  if (loading) return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><div className="g1-spinner" /></div>;
 
-  function authed(el: JSX.Element) {
-    return session ? el : <Navigate to="/signin" />;
-  }
+  function authed(el: JSX.Element) { return session ? el : <Navigate to="/signin" />; }
 
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Public */}
       <Route path="/" element={<Landing session={session} />} />
       <Route path="/signup" element={session ? <Navigate to="/home" /> : <SignUp />} />
       <Route path="/signin" element={session ? <Navigate to="/home" /> : <SignIn />} />
       <Route path="/phone" element={session ? <Navigate to="/home" /> : <PhoneAuth />} />
-
-      {/* Onboarding */}
       <Route path="/onboarding" element={session ? <OnboardingWizard session={session} /> : <Navigate to="/signin" />} />
 
-      {/* Authenticated App Routes */}
+      {/* App */}
       <Route path="/home" element={authed(<G1Layout><Home session={session} /></G1Layout>)} />
       <Route path="/identity" element={authed(<G1Layout><Identity session={session} /></G1Layout>)} />
       <Route path="/roles" element={authed(<G1Layout><Roles session={session} /></G1Layout>)} />
@@ -72,15 +65,14 @@ export default function App() {
       <Route path="/security" element={authed(<G1Layout><Security session={session} /></G1Layout>)} />
       <Route path="/privacy" element={authed(<G1Layout><Privacy session={session} /></G1Layout>)} />
       <Route path="/notifications" element={authed(<G1Layout><Notifications session={session} /></G1Layout>)} />
-
-      {/* Ebook Routes */}
+      
+      {/* Tools */}
       <Route path="/ebooks" element={authed(<G1Layout><Ebooks session={session} /></G1Layout>)} />
       <Route path="/ebook/:id" element={authed(<G1Layout><EbookEditor session={session} /></G1Layout>)} />
+      <Route path="/newsletter" element={authed(<G1Layout><Newsletter session={session} /></G1Layout>)} />
 
-      {/* Public Profile — MUST be last */}
+      {/* Public Profile */}
       <Route path="/:handle" element={<PublicProfile />} />
-      
-      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
