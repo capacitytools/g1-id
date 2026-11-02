@@ -21,8 +21,25 @@ export async function generateEpub(book: any) {
   
   let manifestItems = '';
   let spineItems = '';
+  let coverMeta = '';
 
-  // Add chapters
+  // Handle Cover Image
+  if (book.front_cover_url) {
+    try {
+      const res = await fetch(book.front_cover_url);
+      const blob = await res.blob();
+      zip.file('OEBPS/cover.jpg', blob);
+      
+      manifestItems += `<item id="cover-image" href="cover.jpg" media-type="image/jpeg" properties="cover-image"/>\n`;
+      manifestItems += `<item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>\n`;
+      spineItems += `<itemref idref="cover-page"/>\n`;
+      coverMeta = `<meta name="cover" content="cover-image"/>`;
+    } catch (e) {
+      console.warn("Could not fetch cover image for EPUB", e);
+    }
+  }
+
+  // Handle Chapters
   book.chapters.forEach((ch: any, index: number) => {
     const id = `chap_${index}`;
     manifestItems += `<item id="${id}" href="chapter_${index}.xhtml" media-type="application/xhtml+xml"/>\n`;
@@ -38,6 +55,7 @@ export async function generateEpub(book: any) {
     <dc:identifier id="BookId">urn:uuid:${uuid}</dc:identifier>
     <dc:description>${escapeXml(book.description || '')}</dc:description>
     <meta property="dcterms:modified">${now}</meta>
+    ${coverMeta}
   </metadata>
   <manifest>
     <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
@@ -73,9 +91,23 @@ export async function generateEpub(book: any) {
 </html>`;
   zip.file('OEBPS/nav.xhtml', nav);
 
-  // 5. Chapters
+  // 5. Cover Page XHTML
+  if (book.front_cover_url) {
+    const coverXhtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head><title>Cover</title></head>
+<body>
+  <div style="text-align:center; margin:0; padding:0;">
+    <img src="cover.jpg" alt="Cover" style="max-width:100%; max-height:100vh; object-fit:contain;" />
+  </div>
+</body>
+</html>`;
+    zip.file('OEBPS/cover.xhtml', coverXhtml);
+  }
+
+  // 6. Chapters
   book.chapters.forEach((ch: any, index: number) => {
-    // Convert newlines to paragraphs
     const htmlContent = ch.content.split('\n').filter((p: string) => p.trim()).map((p: string) => `<p>${escapeXml(p)}</p>`).join('');
     
     const chapterXhtml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -90,7 +122,7 @@ export async function generateEpub(book: any) {
     zip.file(`OEBPS/chapter_${index}.xhtml`, chapterXhtml);
   });
 
-  // 6. Back Cover
+  // 7. Back Cover
   const backCoverXhtml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
