@@ -2506,3 +2506,25 @@ input, textarea, select {
   display: block;
   pointer-events: none;
 }
+/* ============================================
+   3D Book Cover Designer
+   ============================================ */
+
+/* Ensure the sheet sits above the bottom nav */
+.sheet-backdrop {
+  z-index: 1000 !important;
+}
+
+/* Customize range inputs if we add them later */
+input[type="color"] {
+  -webkit-appearance: none;
+  border: none;
+  cursor: pointer;
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+  border: 1px solid var(--g1-border);
+  border-radius: 8px;
+}
