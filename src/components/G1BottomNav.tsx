@@ -2,13 +2,12 @@ import { NavLink } from 'react-router-dom';
 import { G1Logo } from './G1Logo';
 
 const TABS = [
-  { to: '/home',      label: 'Home',     icon: HomeIcon },
-  { to: '/identity',  label: 'Identity', icon: IdentityIcon },
-  { to: '/ebooks',    label: 'Books',    icon: BookIcon },
-  { to: '/g1',        label: 'G1',       icon: G1Icon, isCentral: true },
-  // NEW: External link to G1-Autopilot
-  { to: 'https://g1-autopilot-ai.vercel.app/studio', label: 'Plan', icon: PlanIcon, isExternal: true },
-  { to: '/profile',   label: 'Profile',  icon: ProfileIcon },
+  { to: '/home',        label: 'Home',      icon: HomeIcon },
+  { to: '/identity',    label: 'Identity',  icon: IdentityIcon },
+  { to: '/ebooks',      label: 'Books',     icon: BookIcon },
+  { to: '/g1',          label: 'G1',        icon: G1Icon, isCentral: true },
+  { to: '/newsletter',  label: 'Newsletter',icon: MailIcon },
+  { to: '/profile',     label: 'Profile',   icon: ProfileIcon },
 ];
 
 export default function G1BottomNav() {
@@ -16,23 +15,6 @@ export default function G1BottomNav() {
     <nav className="bnav" aria-label="Primary navigation">
       {TABS.map((t) => {
         const Icon = t.icon;
-        
-        // Handle external links separately
-        if (t.isExternal) {
-          return (
-            <a
-              key={t.to}
-              href={t.to}
-              className="bnav__tab"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <span className="bnav__icon"><Icon /></span>
-              <span className="bnav__label">{t.label}</span>
-            </a>
-          );
-        }
-
         return (
           <NavLink
             key={t.to}
@@ -58,14 +40,11 @@ function BookIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fil
 function G1Icon() { return <G1Logo size={22} />; }
 function ProfileIcon() { return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6" /></svg>; }
 
-// NEW: Icon for Content Plan (A clipboard/task list look)
-function PlanIcon() {
+function MailIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="8" y="2" width="8" height="4" rx="1" />
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <path d="M9 12h6" />
-      <path d="M9 16h6" />
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <polyline points="22,6 12,13 2,6" />
     </svg>
   );
 }
