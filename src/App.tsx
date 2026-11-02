@@ -19,6 +19,10 @@ import PublicProfile from './pages/PublicProfile';
 import OnboardingWizard from './features/onboarding/OnboardingWizard';
 import G1Layout from './components/G1Layout';
 
+// --- NEW EBOOK IMPORTS ---
+import Ebooks from './pages/Ebooks';
+import EbookEditor from './pages/EbookEditor';
+
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -49,13 +53,16 @@ export default function App() {
 
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/" element={<Landing session={session} />} />
       <Route path="/signup" element={session ? <Navigate to="/home" /> : <SignUp />} />
       <Route path="/signin" element={session ? <Navigate to="/home" /> : <SignIn />} />
       <Route path="/phone" element={session ? <Navigate to="/home" /> : <PhoneAuth />} />
 
+      {/* Onboarding */}
       <Route path="/onboarding" element={session ? <OnboardingWizard session={session} /> : <Navigate to="/signin" />} />
 
+      {/* Authenticated App Routes */}
       <Route path="/home" element={authed(<G1Layout><Home session={session} /></G1Layout>)} />
       <Route path="/identity" element={authed(<G1Layout><Identity session={session} /></G1Layout>)} />
       <Route path="/roles" element={authed(<G1Layout><Roles session={session} /></G1Layout>)} />
@@ -66,7 +73,14 @@ export default function App() {
       <Route path="/privacy" element={authed(<G1Layout><Privacy session={session} /></G1Layout>)} />
       <Route path="/notifications" element={authed(<G1Layout><Notifications session={session} /></G1Layout>)} />
 
+      {/* Ebook Routes */}
+      <Route path="/ebooks" element={authed(<G1Layout><Ebooks session={session} /></G1Layout>)} />
+      <Route path="/ebook/:id" element={authed(<G1Layout><EbookEditor session={session} /></G1Layout>)} />
+
+      {/* Public Profile — MUST be last */}
       <Route path="/:handle" element={<PublicProfile />} />
+      
+      {/* Fallback */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
