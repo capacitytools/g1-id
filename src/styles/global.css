@@ -2528,3 +2528,33 @@ input[type="color"]::-webkit-color-swatch {
   border: 1px solid var(--g1-border);
   border-radius: 8px;
 }
+/* ============================================
+   Update Bottom Nav for 6 items
+   ============================================ */
+
+/* Change grid from 5 columns to 6 */
+.bnav {
+  grid-template-columns: repeat(6, 1fr) !important;
+  padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0)) !important;
+}
+
+/* Slightly shrink text and icons to fit comfortably */
+.bnav__label {
+  font-size: 9px !important;
+}
+.bnav__icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+.bnav__tab.is-central .bnav__icon {
+  padding: 4px !important;
+}
+.bnav__tab.is-central .bnav__icon svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+/* Make sure external links look identical to internal links */
+a.bnav__tab {
+  text-decoration: none;
+}
