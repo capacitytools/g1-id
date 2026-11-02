@@ -2558,3 +2558,23 @@ input[type="color"]::-webkit-color-swatch {
 a.bnav__tab {
   text-decoration: none;
 }
+/* Ensure 6 items fit perfectly */
+.bnav {
+  grid-template-columns: repeat(6, 1fr) !important;
+  padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0)) !important;
+}
+.bnav__label {
+  font-size: 9px !important;
+}
+.bnav__icon svg {
+  width: 20px !important;
+  height: 20px !important;
+}
+.bnav__tab.is-central .bnav__icon {
+  padding: 4px !important;
+}
+.bnav__tab.is-central .bnav__icon svg {
+  width: 24px !important;
+  height: 24px !important;
+}
+a.bnav__tab { text-decoration: none; }
