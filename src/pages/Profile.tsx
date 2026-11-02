@@ -25,36 +25,19 @@ export default function Profile({ session }: { session: any }) {
   }
 
   async function handleDownload() {
-    setBusy('download');
-    setError('');
-    try {
-      await downloadMyData(session.user.id);
-    } catch (e: any) {
-      setError(e.message || 'Could not export data.');
-    } finally {
-      setBusy('');
-    }
+    setBusy('download'); setError('');
+    try { await downloadMyData(session.user.id); } 
+    catch (e: any) { setError(e.message || 'Could not export data.'); } 
+    finally { setBusy(''); }
   }
 
   async function handleDelete() {
-    setBusy('delete');
-    setError('');
-
-    const confirmation = prompt(
-      'This will permanently delete your G1 ID and all your data.\n\nType DELETE (in capitals) to confirm:'
-    );
-    if (confirmation === null) {
-      setBusy('');
-      return;
-    }
-
+    setBusy('delete'); setError('');
+    const confirmation = prompt('This will permanently delete your G1 ID and all your data.\n\nType DELETE (in capitals) to confirm:');
+    if (confirmation === null) { setBusy(''); return; }
     const result = await deleteMyAccount(session.user.id, confirmation);
     setBusy('');
-    if (!result.ok) {
-      setError(result.error || 'Could not delete account.');
-      return;
-    }
-
+    if (!result.ok) { setError(result.error || 'Could not delete account.'); return; }
     alert('Your G1 ID has been deleted.');
     nav('/', { replace: true });
   }
@@ -72,6 +55,12 @@ export default function Profile({ session }: { session: any }) {
         <Link to="/roles" className="menu__item">
           <span>My Roles</span><span className="menu__chev">›</span>
         </Link>
+        
+        {/* NEW: Link to Autopilot Studio */}
+        <a href="https://g1-autopilot-ai.vercel.app/studio" target="_blank" rel="noopener noreferrer" className="menu__item">
+          <span>Content Plan (Autopilot AI)</span><span className="menu__chev">↗</span>
+        </a>
+
         <Link to="/security" className="menu__item">
           <span>Security Center</span><span className="menu__chev">›</span>
         </Link>
@@ -92,12 +81,7 @@ export default function Profile({ session }: { session: any }) {
       </div>
 
       <div className="menu">
-        <button
-          className="menu__item"
-          onClick={handleDownload}
-          disabled={busy === 'download'}
-          style={{ width: '100%', textAlign: 'left' }}
-        >
+        <button className="menu__item" onClick={handleDownload} disabled={busy === 'download'} style={{ width: '100%', textAlign: 'left' }}>
           <span>{busy === 'download' ? 'Preparing…' : 'Download my data'}</span>
           <span className="menu__chev">↓</span>
         </button>
@@ -105,25 +89,14 @@ export default function Profile({ session }: { session: any }) {
 
       {error && <div className="auth-alert auth-alert--error">{error}</div>}
 
-      <button
-        className="g1-btn g1-btn--ghost g1-btn--full"
-        style={{ marginTop: 24 }}
-        onClick={signOut}
-      >
+      <button className="g1-btn g1-btn--ghost g1-btn--full" style={{ marginTop: 24 }} onClick={signOut}>
         Sign out
       </button>
 
       <div className="danger-zone">
         <h3 className="danger-zone__title">Danger zone</h3>
-        <p className="danger-zone__text">
-          Deleting your G1 ID removes your profile, roles, devices, and connected
-          products. This cannot be undone.
-        </p>
-        <button
-          className="g1-btn g1-btn--full danger-zone__btn"
-          onClick={handleDelete}
-          disabled={busy === 'delete'}
-        >
+        <p className="danger-zone__text">Deleting your G1 ID removes your profile, roles, devices, and connected products.</p>
+        <button className="g1-btn g1-btn--full danger-zone__btn" onClick={handleDelete} disabled={busy === 'delete'}>
           {busy === 'delete' ? 'Deleting…' : 'Delete my account'}
         </button>
       </div>
