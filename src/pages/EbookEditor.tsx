@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { askG1AI } from '../lib/ai';
 import { generateEpub } from '../lib/epub';
 import { uploadAvatar } from '../lib/cloudinary';
+import BookCoverDesigner from '../components/BookCoverDesigner';
 
 export default function EbookEditor({ session }: { session: any }) {
   const { id } = useParams();
@@ -14,6 +15,7 @@ export default function EbookEditor({ session }: { session: any }) {
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<number | null>(null);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [showDesigner, setShowDesigner] = useState(false);
 
   // Load book
   useEffect(() => {
@@ -74,11 +76,28 @@ export default function EbookEditor({ session }: { session: any }) {
 
     setUploadingCover(true);
     try {
-      // We use the same Cloudinary upload function as the profile avatar
       const url = await uploadAvatar(file);
       saveBook({ ...book, front_cover_url: url });
     } catch (err: any) {
       alert('Upload failed: ' + err.message);
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  async function handleDesignerSave(dataUrl: string) {
+    setShowDesigner(false);
+    setUploadingCover(true);
+    try {
+      // Convert Base64 to File
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' });
+      
+      const url = await uploadAvatar(file);
+      saveBook({ ...book, front_cover_url: url });
+    } catch (err: any) {
+      alert('Could not save designed cover.');
     } finally {
       setUploadingCover(false);
     }
@@ -145,11 +164,19 @@ Please write the NEXT paragraph or two to continue this chapter. Do not repeat w
         </button>
       </div>
 
-      {/* COVER UPLOAD */}
-      <div style={{ marginBottom: 24, textAlign: 'center' }}>
-        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8, textAlign: 'left' }}>
-          Front Cover
-        </label>
+      {/* COVER SECTION */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <label style={{ fontSize: 14, fontWeight: 600 }}>Front Cover</label>
+          <button 
+            onClick={() => setShowDesigner(true)}
+            className="g1-btn g1-btn--ghost" 
+            style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
+          >
+            ✨ Design 3D Cover
+          </button>
+        </div>
+        
         <label 
           htmlFor="cover-upload" 
           style={{ 
@@ -169,8 +196,8 @@ Please write the NEXT paragraph or two to continue this chapter. Do not repeat w
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--g1-text-secondary)' }}>
               <span style={{ fontSize: 32, marginBottom: 8 }}>📸</span>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{uploadingCover ? 'Uploading...' : 'Upload Cover Image'}</span>
-              <span style={{ fontSize: 12, marginTop: 4 }}>Recommended: 1600 x 2560 px</span>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{uploadingCover ? 'Uploading...' : 'Upload Own Image'}</span>
+              <span style={{ fontSize: 12, marginTop: 4 }}>or click "Design 3D Cover" above</span>
             </div>
           )}
         </label>
@@ -269,6 +296,16 @@ Please write the NEXT paragraph or two to continue this chapter. Do not repeat w
           style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', minHeight: 120 }}
         />
       </div>
+
+      {/* 3D Designer Modal */}
+      {showDesigner && (
+        <BookCoverDesigner
+          initialTitle={book.title}
+          initialAuthor={book.author || ''}
+          onSave={handleDesignerSave}
+          onClose={() => setShowDesigner(false)}
+        />
+      )}
     </div>
   );
 }
