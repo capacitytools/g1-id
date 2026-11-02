@@ -16,40 +16,16 @@ export default function Home({ session }: { session: any }) {
 
   useEffect(() => {
     (async () => {
-      const { data: p } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (p && !p.onboarding_complete) {
-        nav('/onboarding', { replace: true });
-        return;
-      }
-
-      const { data: r } = await supabase
-        .from('roles')
-        .select('role')
-        .eq('user_id', session.user.id);
-
+      const { data: p } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+      if (p && !p.onboarding_complete) { nav('/onboarding', { replace: true }); return; }
+      const { data: r } = await supabase.from('roles').select('role').eq('user_id', session.user.id);
       setProfile(p);
       setRoles((r || []).map((x: any) => x.role));
       setLoading(false);
     })();
   }, [session, nav]);
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2200);
-  }
-
-  if (loading) {
-    return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
-        <div className="g1-spinner" />
-      </div>
-    );
-  }
+  if (loading) return <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}><div className="g1-spinner" /></div>;
 
   const firstName = (profile?.display_name || '').split(' ')[0] || profile?.username;
   const roleLabels = G1_ROLES.filter((r) => roles.includes(r.key));
@@ -70,51 +46,40 @@ export default function Home({ session }: { session: any }) {
           <G1Wordmark height={18} variant="white" />
           <span>DIGITAL IDENTITY</span>
         </div>
-
         <div className="idcard__body">
           <div className="idcard__avatar">
-            {profile?.avatar_url
-              ? <img src={avatarUrl(profile.avatar_url, 200)} alt="" />
-              : <span>{(profile?.display_name || profile?.username || '?')[0].toUpperCase()}</span>}
+            {profile?.avatar_url ? <img src={avatarUrl(profile.avatar_url, 200)} alt="" /> : <span>{(profile?.display_name || profile?.username || '?')[0].toUpperCase()}</span>}
           </div>
           <div className="idcard__meta">
             <p className="idcard__name">{profile?.display_name || profile?.username}</p>
             <p className="idcard__handle">@{profile?.username}</p>
             <div className="idcard__roles">
-              {roleLabels.slice(0, 3).map((r) => (
-                <span key={r.key} className="idcard__role">
-                  {r.emoji} {r.label}
-                </span>
-              ))}
+              {roleLabels.slice(0, 3).map((r) => <span key={r.key} className="idcard__role">{r.emoji} {r.label}</span>)}
             </div>
           </div>
         </div>
-
         <div className="idcard__actions">
-          <button className="idcard__btn idcard__btn--ghost" onClick={() => setQrOpen(true)}>
-            Share ID
-          </button>
-          <button
-            className="idcard__btn idcard__btn--solid"
-            onClick={() => nav('/identity')}
-          >
-            View Profile
-          </button>
+          <button className="idcard__btn idcard__btn--ghost" onClick={() => setQrOpen(true)}>Share ID</button>
+          <button className="idcard__btn idcard__btn--solid" onClick={() => nav('/identity')}>View Profile</button>
         </div>
-
-        <p className="idcard__note">
-          G1 digital identity — not government identification.
-        </p>
+        <p className="idcard__note">G1 digital identity — not government identification.</p>
       </div>
+
+      {/* AUTOPILOT QUICK LINK */}
+      <a href="https://g1-autopilot-ai.vercel.app/studio" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', background: '#F0FBF5', padding: '16px 20px', borderRadius: 16, marginBottom: 28, textDecoration: 'none', color: 'var(--g1-primary-dark)', border: '1px solid #C7E5D5' }}>
+        <span style={{ fontSize: 24, marginRight: 16 }}>🚀</span>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800 }}>Content Plan Studio</h2>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--g1-primary)' }}>Generate SEO ideas with Autopilot AI</p>
+        </div>
+        <span style={{ fontSize: 20 }}>↗</span>
+      </a>
 
       <section className="home__section">
         <div className="home__section-head">
           <h2>Your G1 World</h2>
-          <button className="home__section-link" onClick={() => nav('/g1')}>
-            View all →
-          </button>
+          <button className="home__section-link" onClick={() => nav('/g1')}>View all →</button>
         </div>
-
         <div className="home__products">
           {G1_PRODUCTS.slice(0, 6).map((p) => (
             <button key={p.key} className="pcard" type="button">
@@ -126,14 +91,7 @@ export default function Home({ session }: { session: any }) {
         </div>
       </section>
 
-      <G1QRCard
-        open={qrOpen}
-        onClose={() => setQrOpen(false)}
-        username={profile?.username}
-        displayName={profile?.display_name}
-        onToast={showToast}
-      />
-
+      <G1QRCard open={qrOpen} onClose={() => setQrOpen(false)} username={profile?.username} displayName={profile?.display_name} onToast={setToast} />
       {toast && <div className="g1-toast">{toast}</div>}
     </div>
   );
