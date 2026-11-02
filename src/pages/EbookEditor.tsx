@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { askG1AI } from '../lib/ai';
 import { generateEpub } from '../lib/epub';
+import { uploadAvatar } from '../lib/cloudinary';
 
 export default function EbookEditor({ session }: { session: any }) {
   const { id } = useParams();
@@ -12,6 +13,7 @@ export default function EbookEditor({ session }: { session: any }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<number | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   // Load book
   useEffect(() => {
@@ -36,7 +38,6 @@ export default function EbookEditor({ session }: { session: any }) {
           .single();
         
         if (data) {
-          // Ensure chapters is an array
           if (!Array.isArray(data.chapters)) data.chapters = [];
           setBook(data);
         }
@@ -57,11 +58,30 @@ export default function EbookEditor({ session }: { session: any }) {
         author: updatedBook.author,
         description: updatedBook.description,
         back_cover_text: updatedBook.back_cover_text,
+        front_cover_url: updatedBook.front_cover_url,
         chapters: updatedBook.chapters,
         updated_at: new Date().toISOString(),
       })
       .eq('id', updatedBook.id);
     setSaving(false);
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) return alert('Image must be under 5MB');
+
+    setUploadingCover(true);
+    try {
+      // We use the same Cloudinary upload function as the profile avatar
+      const url = await uploadAvatar(file);
+      saveBook({ ...book, front_cover_url: url });
+    } catch (err: any) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploadingCover(false);
+    }
   }
 
   function addChapter() {
@@ -119,10 +139,54 @@ Please write the NEXT paragraph or two to continue this chapter. Do not repeat w
         <button 
           className="g1-btn g1-btn--solid" 
           onClick={() => generateEpub(book)}
-          style={{ width: '100%', background: '#FF9900', borderColor: '#FF9900', color: '#000' }}
+          style={{ width: '100%', background: '#FF9900', borderColor: '#FF9900', color: '#000', fontWeight: 800 }}
         >
-          ⬇ Download EPUB (Amazon KDP Ready)
+          ⬇ Export EPUB (Amazon KDP Ready)
         </button>
+      </div>
+
+      {/* COVER UPLOAD */}
+      <div style={{ marginBottom: 24, textAlign: 'center' }}>
+        <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8, textAlign: 'left' }}>
+          Front Cover
+        </label>
+        <label 
+          htmlFor="cover-upload" 
+          style={{ 
+            display: 'block', 
+            width: '100%', 
+            height: 240, 
+            background: 'var(--g1-surface)', 
+            border: '2px dashed var(--g1-border)', 
+            borderRadius: 16, 
+            overflow: 'hidden', 
+            position: 'relative',
+            cursor: 'pointer'
+          }}
+        >
+          {book.front_cover_url ? (
+            <img src={book.front_cover_url} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--g1-text-secondary)' }}>
+              <span style={{ fontSize: 32, marginBottom: 8 }}>📸</span>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{uploadingCover ? 'Uploading...' : 'Upload Cover Image'}</span>
+              <span style={{ fontSize: 12, marginTop: 4 }}>Recommended: 1600 x 2560 px</span>
+            </div>
+          )}
+        </label>
+        <input 
+          id="cover-upload" 
+          type="file" 
+          accept="image/*" 
+          onChange={handleCoverUpload} 
+          style={{ display: 'none' }} 
+          disabled={uploadingCover}
+        />
+        {book.front_cover_url && (
+          <button onClick={() => saveBook({ ...book, front_cover_url: null })} style={{ marginTop: 8, fontSize: 12, color: 'var(--g1-error)', background: 'none', border: 'none', textDecoration: 'underline' }}>
+            Remove Cover
+          </button>
+        )}
       </div>
 
       {/* Book Metadata */}
@@ -195,7 +259,7 @@ Please write the NEXT paragraph or two to continue this chapter. Do not repeat w
       <div style={{ background: '#17211C', color: '#fff', padding: 24, borderRadius: 16 }}>
         <h3 style={{ margin: '0 0 16px', color: '#fff' }}>Back Cover</h3>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>
-          This text will appear at the very end of the EPUB, typically containing the author bio, acknowledgments, or a call to action.
+          This text will appear at the very end of the EPUB.
         </p>
         <textarea
           value={book.back_cover_text || ''}
